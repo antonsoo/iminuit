@@ -1248,6 +1248,9 @@ class ExtendedUnbinnedNLL(UnbinnedCost):
         return 2 * (fint + _unbinned_nll(f))
 
     def _grad(self, args: Sequence[float]) -> NDArray:
+        if self._npoints() == 0:
+            gint, _ = self._eval_model_grad(args)
+            return 2 * gint
         g = self._pointwise_score(args)
         return -2 * np.sum(g, axis=1)
 

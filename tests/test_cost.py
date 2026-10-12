@@ -543,6 +543,27 @@ def test_ExtendedUnbinnedNLL_2D(use_grad):
         assert m.ngrad == 0
 
 
+@pytest.mark.parametrize("log", (False, True))
+@pytest.mark.parametrize("dimensions, masked", ((1, False), (1, True), (2, False)))
+def test_ExtendedUnbinnedNLL_empty_gradient(log, masked, dimensions):
+    def model(x, n, m):
+        integral = n * m**2
+        density = np.full(x.shape[-1], np.log(integral) if log else integral)
+        return integral, density
+
+    def grad(x, n, m):
+        integral_grad = np.array([m**2, 2 * n * m])
+        density_grad = np.array([1 / n, 2 / m]) if log else integral_grad
+        return integral_grad, np.repeat(density_grad[:, None], x.shape[-1], axis=1)
+
+    shape = (3 if masked else 0,) if dimensions == 1 else (2, 3 if masked else 0)
+    c = ExtendedUnbinnedNLL(np.empty(shape), model, grad=grad, log=log)
+    if masked:
+        c.mask = np.array([], dtype=int)
+    assert_allclose(c(3, 2), 24)
+    assert_allclose(c.grad(3, 2), [8, 24])
+
+
 def test_ExtendedUnbinnedNLL_mask():
     def model(x, a):
         return 1, x + a
